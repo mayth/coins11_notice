@@ -18,6 +18,7 @@ class CoinsNoticeBot
   POST_DATABASE_FILE = 'posts.db'
   MAX_RETRY_COUNT = 10
   RETRY_INTERVAL = 30
+  MY_ID = 552375459
 
   def initialize
     @post_queue = Queue.new
@@ -100,7 +101,9 @@ class CoinsNoticeBot
           begin
             connect do |json|
               if json['direct_message']
-                @message_recv_queue.push json
+                if json['direct_message']['sender']['id'] != MY_ID
+                  @message_recv_queue.push json
+                end
               end
             end
           rescue Timeout::Error, StandardError
