@@ -80,6 +80,16 @@ class CoinsNoticeBot
     text = json['text'].strip
     @post_queue.push text
     @message_send_queue.push Hash[:text, 'your post is accepted. thanks!', :user, sender['id']]
+    datetime = DateTime.parse(json['created_at'], TWITTER_DATETIME_FORMAT)
+    db = nil
+    begin
+      db = SQLite3::Database.new(POST_DATABASE_FILE)
+    rescue
+      puts 'error on opening db'
+    end
+    if db
+      db.execute('INSERT INTO message VALUES(?, ?, ?, ?, ?)', json['id'], sender['id'], sender['screen_name'], datetime.strftime(DB_DATETIME_FORMAT), text)
+    end
   end
   
   def post(status)
