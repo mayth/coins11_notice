@@ -145,5 +145,8 @@ end #end CoinsNotice class
 if __FILE__
   bot = CoinsNoticeBot.new
   bot.run
+  loop do
+    gets
+  end
 end
 
