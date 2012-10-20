@@ -82,6 +82,7 @@ class CoinsNoticeBot
     puts 'processing message'
     sender = json['sender']
     text = json['text'].strip
+    return if sender['id'] == MY_ID
     @post_queue.push text
     @message_send_queue.push Hash[:text, 'your post is accepted. thanks!', :user, sender['id']]
     datetime = DateTime.parse(json['created_at'], TWITTER_DATETIME_FORMAT)
