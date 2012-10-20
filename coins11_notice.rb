@@ -18,6 +18,7 @@ class CoinsNoticeBot
   POST_DATABASE_FILE = 'posts.db'
   MAX_RETRY_COUNT = 10
   RETRY_INTERVAL = 30
+  MY_ID = 552375459
 
   def initialize
     puts 'initializing...'
@@ -83,6 +84,16 @@ class CoinsNoticeBot
     text = json['text'].strip
     @post_queue.push text
     @message_send_queue.push Hash[:text, 'your post is accepted. thanks!', :user, sender['id']]
+    datetime = DateTime.parse(json['created_at'], TWITTER_DATETIME_FORMAT)
+    db = nil
+    begin
+      db = SQLite3::Database.new(POST_DATABASE_FILE)
+    rescue
+      puts 'error on opening db'
+    end
+    if db
+      db.execute('INSERT INTO message VALUES(?, ?, ?, ?, ?)', json['id'], sender['id'], sender['screen_name'], datetime.strftime(DB_DATETIME_FORMAT), text)
+    end
   end
   
   def post(status)
@@ -108,7 +119,9 @@ class CoinsNoticeBot
           begin
             connect do |json|
               if json['direct_message']
-                @message_recv_queue.push json
+                if json['direct_message']['sender']['id'] != MY_ID
+                  @message_recv_queue.push json
+                end
               end
             end
           rescue Timeout::Error, StandardError
