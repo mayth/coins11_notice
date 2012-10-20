@@ -1,8 +1,8 @@
 #coding: utf-8
+require 'bundler/setup'
 require 'net/https'
 require 'oauth'
 require 'json'
-require 'psych'
 require 'yaml'
 require 'thread'
 require 'sqlite3'
@@ -20,6 +20,7 @@ class CoinsNoticeBot
   RETRY_INTERVAL = 30
 
   def initialize
+    puts 'initializing...'
     @post_queue = Queue.new
     @message_recv_queue = Queue.new
     @message_send_queue = Queue.new
@@ -38,10 +39,12 @@ class CoinsNoticeBot
       @credential['access_token'],
       @credential['access_token_secret']
     )
+    puts 'initialized!'
   end
 
   def connect
-    uri = URI.parse("https://userstream.twitter.com/2/user.json?track=#{SCREEN_NAME}")
+    puts 'connecting to Twitter...'
+    uri = URI.parse("https://userstream.twitter.com/1.1/user.json?track=#{SCREEN_NAME}")
 
     https = Net::HTTP.new(uri.host, uri.port)
     https.use_ssl = true
@@ -75,6 +78,7 @@ class CoinsNoticeBot
   end
 
   def message_proc(json)
+    puts 'processing message'
     sender = json['sender']
     text = json['text'].strip
     @post_queue.push text
@@ -82,19 +86,23 @@ class CoinsNoticeBot
   end
   
   def post(status)
+    puts 'posting status'
     @access_token.post('https://api.twitter.com/1/statuses/update.json',
                        'status' => status)
   end
   
   def send_direct_message(text, recipient_id)
+    puts "send message to #{recipient_id}"
     @access_token.post('https://api.twitter.com/1/direct_messages/new.json',
                        'user_id' => recipient_id,
                        'text' => text)
   end
 
   def run
+    puts 'bot is starting...'
     retry_count = 0
     receive_thread = Thread.new do
+      puts 'receiver thread is ready.'
       begin
         loop do
           begin
@@ -118,32 +126,46 @@ class CoinsNoticeBot
         end #end loop
       end #end begin
     end #end receive_thread
-    
+   
+    sleep 1
+
     message_recv_thread = Thread.new do
+      puts 'message receive thread is ready.'
       loop do
         json = @message_recv_queue.pop
         message_proc json['direct_message']
       end
     end
+
+    sleep 1
     
     message_send_thread = Thread.new do
+      puts 'message send thread is ready.'
       loop do
         message = @message_send_queue.pop
         send_direct_message(message[:text], message[:user])
       end
     end
+
+    sleep 1
     
     post_thread = Thread.new do
+      puts 'post thread is ready.'
       loop do
         status = @post_queue.pop
         post status
       end
     end
+
+    sleep 1
+
+    puts 'bot is started!'
   end #end run method
 end #end CoinsNotice class
 
-if __FILE__
-  bot = CoinsNoticeBot.new
-  bot.run
+bot = CoinsNoticeBot.new
+bot.run
+loop do
+  sleep 1
 end
 
